@@ -1,0 +1,211 @@
+Build a complete Employee LMS (Login Management System) with the following requirements. Use React for the frontend, Flask for the backend, and SQLite as the database. UI must be simple, clean, and professional.
+
+EMPLOYEE MODULE
+
+Authentication:
+
+Employee logs in using Employee ID + Password.
+
+Employee can Login (Mark Present) and Logout (Mark End Time).
+
+Employees cannot access any route without login (protected routes).
+
+Employee Dashboard must show:
+
+Name
+
+Role
+
+Attendance status: Present / Absent / Today’s Login-Time / Logout-Time
+
+Total working days count
+
+Task Dashboard (tasks assigned by Admin)
+
+Task Title
+
+Description
+
+Assigned Date
+
+Status: Pending / Completed
+
+Employee can mark status as Completed
+
+Leave Request System
+
+Employee can apply for leave
+
+Status: Pending / Approved / Rejected
+
+Status should reflect inside Employee Dashboard
+
+Employees cannot:
+
+Add users
+
+Edit users
+
+View admin pages
+
+Modify attendance manually
+
+Access any admin API
+
+ADMIN MODULE (FULL CONTROL)
+
+Admin Dashboard should include:
+
+Total Employees Count
+
+Today’s Present Count
+
+Today’s Absent Count
+
+Login / Logout history with:
+
+Filter by Employee ID
+
+Filter by Date
+
+Filter by Month
+
+Export attendance history to CSV or Excel (one-month data).
+
+Graphs & Analytics (React charts):
+
+Monthly attendance graph
+
+Task completion rate
+
+Leave requests analytics
+
+CRUD Operations (Admin Only):
+
+Add Employee
+
+Edit Employee
+
+Delete Employee
+
+List All Employees
+
+Admin should create users with:
+
+Name
+
+Employee ID
+
+Password
+
+Role
+
+Task Assignment Panel:
+
+Admin assigns tasks to employees
+
+Sets due date
+
+Sets priority
+
+Tracks completion status
+
+Leave Management Panel:
+
+Admin can Approve / Reject leave requests
+
+Employee dashboard must update accordingly
+
+SYSTEM RULES
+
+Only Admin can create new users.
+
+Only Admin can assign tasks.
+
+Only Admin can approve leave.
+
+Employee can only:
+
+Mark attendance
+
+View tasks
+
+Mark tasks completed
+
+Send leave request
+
+BACKEND (Flask) REQUIREMENTS
+
+Authentication APIs
+
+Employee CRUD APIs (admin only)
+
+Task Management APIs
+
+Attendance APIs (login/logout)
+
+Leave Request APIs
+
+Monthly log export API (CSV + Excel)
+
+Analytics endpoints for charts
+
+Use JWT for authentication
+
+FRONTEND (React) REQUIREMENTS
+
+Employee Pages:
+
+Login Page
+
+Employee Dashboard
+
+Task Viewer
+
+Leave Request Page
+
+Admin Pages:
+
+Admin Login
+
+Admin Dashboard
+
+Employees CRUD Page
+
+Assign Task Page
+
+Leave Management Page
+
+Attendance History with filters
+
+Analytics + Graphs Page
+
+Use:
+
+React
+
+Axios
+
+React Router
+
+Simple clean UI (Tailwind or basic CSS)
+
+Chart.js or Recharts for graphs
+
+DELIVERABLES
+
+Replit must generate:
+
+Full folder structure
+
+Backend Flask code
+
+React frontend code
+
+All pages, components, services
+
+Database models & migrations
+
+API documentation
+
+Instructions to run React + Flask together on Replit
