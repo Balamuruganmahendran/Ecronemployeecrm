@@ -40,12 +40,12 @@ export default function AdminSidebar() {
   };
 
   return (
-    <div className="w-64 bg-sidebar border-r border-sidebar-border h-screen flex flex-col">
-      <div className="h-16 flex items-center px-6 border-b border-sidebar-border">
-        <h1 className="text-lg font-semibold text-sidebar-foreground">Employee LMS</h1>
+    <div className="hidden md:flex md:flex-col w-full md:w-64 bg-sidebar border-r border-sidebar-border md:h-screen md:min-h-screen">
+      <div className="h-14 md:h-16 flex items-center px-4 md:px-6 border-b border-sidebar-border">
+        <h1 className="text-base md:text-lg font-semibold text-sidebar-foreground truncate">Employee LMS</h1>
       </div>
 
-      <nav className="flex-1 p-4 space-y-2">
+      <nav className="flex-1 p-3 md:p-4 space-y-1 md:space-y-2 overflow-y-auto">
         {menuItems.map((item) => {
           const Icon = item.icon;
           const isActive = location === item.path;
@@ -54,37 +54,37 @@ export default function AdminSidebar() {
             <Link key={item.path} href={item.path}>
               <Button
                 variant="ghost"
-                className={`w-full justify-start gap-3 h-10 pl-4 ${
+                className={`w-full justify-start gap-3 h-9 md:h-10 pl-3 md:pl-4 text-xs md:text-sm ${
                   isActive ? 'bg-sidebar-accent text-sidebar-accent-foreground' : ''
                 }`}
                 data-testid={`link-${item.label.toLowerCase().replace(/\s+/g, '-')}`}
               >
-                <Icon className="w-4 h-4" />
-                <span>{item.label}</span>
+                <Icon className="w-4 h-4 flex-shrink-0" />
+                <span className="hidden lg:inline">{item.label}</span>
               </Button>
             </Link>
           );
         })}
       </nav>
 
-      <div className="p-4 border-t border-sidebar-border space-y-2">
-        <div className="flex items-center gap-3 px-4 py-2">
-          <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center">
+      <div className="p-3 md:p-4 border-t border-sidebar-border space-y-2">
+        <div className="flex items-center gap-3 px-3 md:px-4 py-2">
+          <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center flex-shrink-0">
             <User className="w-4 h-4 text-primary-foreground" />
           </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-sidebar-foreground truncate">{employee?.name}</p>
+          <div className="flex-1 min-w-0 hidden lg:block">
+            <p className="text-xs md:text-sm font-medium text-sidebar-foreground truncate">{employee?.name}</p>
             <p className="text-xs text-muted-foreground">Admin</p>
           </div>
         </div>
         <Button
           variant="ghost"
-          className="w-full justify-start gap-3 h-10 pl-4"
+          className="w-full justify-start gap-3 h-9 md:h-10 pl-3 md:pl-4 text-xs md:text-sm"
           onClick={handleLogout}
           data-testid="button-logout"
         >
-          <LogOut className="w-4 h-4" />
-          <span>Logout</span>
+          <LogOut className="w-4 h-4 flex-shrink-0" />
+          <span className="hidden lg:inline">Logout</span>
         </Button>
       </div>
     </div>

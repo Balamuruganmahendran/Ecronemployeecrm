@@ -30,17 +30,17 @@ export default function AdminDashboard() {
 
   return (
     <ProtectedRoute adminOnly>
-      <div className="flex min-h-screen bg-background">
+      <div className="flex flex-col md:flex-row min-h-screen bg-background">
         <AdminSidebar />
-        <main className="flex-1 p-8 space-y-8">
+        <main className="flex-1 p-4 md:p-8 space-y-4 md:space-y-8 overflow-y-auto">
           <div>
-            <h1 className="text-3xl font-semibold">Dashboard</h1>
-            <p className="text-muted-foreground mt-2">
+            <h1 className="text-2xl md:text-3xl font-semibold">Dashboard</h1>
+            <p className="text-xs md:text-base text-muted-foreground mt-2">
               Overview of your organization's performance
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6">
             <StatCard
               label="Total Employees"
               value={stats?.totalEmployees || 0}
@@ -63,27 +63,29 @@ export default function AdminDashboard() {
             />
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 md:gap-6">
             <Card>
-              <CardHeader>
-                <CardTitle className="text-lg font-medium">Pending Leave Requests</CardTitle>
+              <CardHeader className="pb-3 md:pb-6">
+                <CardTitle className="text-base md:text-lg font-medium">Pending Leave Requests</CardTitle>
               </CardHeader>
               <CardContent>
                 {pendingLeaves.length === 0 ? (
-                  <div className="text-center py-8 text-muted-foreground">
+                  <div className="text-center py-6 md:py-8 text-xs md:text-base text-muted-foreground">
                     <p>No pending leave requests</p>
                   </div>
                 ) : (
-                  <div className="space-y-3">
+                  <div className="space-y-2 md:space-y-3">
                     {pendingLeaves.slice(0, 5).map((request) => (
-                      <div key={request.id} className="flex items-center justify-between border rounded-lg p-3">
-                        <div className="flex-1">
-                          <p className="font-medium">{request.employeeId}</p>
-                          <p className="text-sm text-muted-foreground">
+                      <div key={request.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between border rounded-lg p-2 md:p-3 gap-2">
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-xs md:text-base truncate">{request.employeeId}</p>
+                          <p className="text-xs md:text-sm text-muted-foreground">
                             {request.startDate} - {request.endDate}
                           </p>
                         </div>
-                        <StatusBadge status="Pending" />
+                        <div className="flex-shrink-0">
+                          <StatusBadge status="Pending" />
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -92,23 +94,23 @@ export default function AdminDashboard() {
             </Card>
 
             <Card>
-              <CardHeader>
-                <CardTitle className="text-lg font-medium">Today's Attendance</CardTitle>
+              <CardHeader className="pb-3 md:pb-6">
+                <CardTitle className="text-base md:text-lg font-medium">Today's Attendance</CardTitle>
               </CardHeader>
               <CardContent>
                 {todayAttendance.length === 0 ? (
-                  <div className="text-center py-8 text-muted-foreground">
+                  <div className="text-center py-6 md:py-8 text-xs md:text-base text-muted-foreground">
                     <p>No attendance records for today</p>
                   </div>
                 ) : (
-                  <div className="space-y-3">
+                  <div className="space-y-2 md:space-y-3">
                     {todayAttendance.slice(0, 5).map((record) => (
-                      <div key={record.id} className="flex items-center justify-between border rounded-lg p-3">
-                        <div className="flex-1">
-                          <p className="font-medium">{record.name}</p>
-                          <p className="text-sm text-muted-foreground">{record.employeeId}</p>
+                      <div key={record.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between border rounded-lg p-2 md:p-3 gap-2">
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-xs md:text-base truncate">{record.name}</p>
+                          <p className="text-xs md:text-sm text-muted-foreground">{record.employeeId}</p>
                         </div>
-                        <p className="text-sm tabular-nums text-muted-foreground">
+                        <p className="text-xs md:text-sm tabular-nums text-muted-foreground flex-shrink-0">
                           {new Date(record.loginTime).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
                         </p>
                       </div>

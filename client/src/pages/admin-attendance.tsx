@@ -70,122 +70,107 @@ export default function AdminAttendancePage() {
 
   return (
     <ProtectedRoute adminOnly>
-      <div className="flex min-h-screen bg-background">
+      <div className="flex flex-col md:flex-row min-h-screen bg-background">
         <AdminSidebar />
-        <main className="flex-1 p-8 space-y-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-semibold">Attendance History</h1>
-              <p className="text-muted-foreground mt-2">
+        <main className="flex-1 p-4 md:p-8 space-y-4 md:space-y-6 overflow-y-auto">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div className="min-w-0">
+              <h1 className="text-2xl md:text-3xl font-semibold">Attendance History</h1>
+              <p className="text-xs md:text-base text-muted-foreground mt-2">
                 View and export employee attendance records
               </p>
             </div>
-            <div className="flex gap-2">
+            <div className="flex flex-col sm:flex-row gap-2">
               <Button
                 variant="outline"
-                className="gap-2"
+                className="gap-2 text-xs md:text-sm w-full sm:w-auto"
                 onClick={() => handleExport("csv")}
                 data-testid="button-export-csv"
               >
                 <FileText className="w-4 h-4" />
-                Export CSV
+                <span className="hidden sm:inline">Export CSV</span>
+                <span className="sm:hidden">CSV</span>
               </Button>
               <Button
-                className="gap-2"
+                className="gap-2 text-xs md:text-sm w-full sm:w-auto"
                 onClick={() => handleExport("excel")}
                 data-testid="button-export-excel"
               >
                 <Download className="w-4 h-4" />
-                Export Excel
+                <span className="hidden sm:inline">Export Excel</span>
+                <span className="sm:hidden">Excel</span>
               </Button>
             </div>
           </div>
 
           <Card>
-            <CardContent className="p-6">
+            <CardContent className="p-4 md:p-6">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                 <div className="space-y-2">
-                  <Label htmlFor="filterEmployeeId">Employee ID</Label>
+                  <Label htmlFor="employeeId" className="text-xs md:text-sm">Employee ID</Label>
                   <Input
-                    id="filterEmployeeId"
-                    placeholder="EMP001"
+                    id="employeeId"
+                    placeholder="Filter by ID"
                     value={filters.employeeId}
                     onChange={(e) => setFilters({ ...filters, employeeId: e.target.value })}
-                    data-testid="input-filter-employee-id"
+                    className="text-xs md:text-sm"
+                    data-testid="input-filter-employee"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="filterDate">Date</Label>
+                  <Label htmlFor="date" className="text-xs md:text-sm">Date</Label>
                   <Input
-                    id="filterDate"
+                    id="date"
                     type="date"
                     value={filters.date}
                     onChange={(e) => setFilters({ ...filters, date: e.target.value, month: "" })}
+                    className="text-xs md:text-sm"
                     data-testid="input-filter-date"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="filterMonth">Month</Label>
+                  <Label htmlFor="month" className="text-xs md:text-sm">Month</Label>
                   <Input
-                    id="filterMonth"
+                    id="month"
                     type="month"
                     value={filters.month}
                     onChange={(e) => setFilters({ ...filters, month: e.target.value, date: "" })}
+                    className="text-xs md:text-sm"
                     data-testid="input-filter-month"
                   />
                 </div>
               </div>
 
               {isLoading ? (
-                <div className="text-center py-12 text-muted-foreground">
+                <div className="text-center py-8 md:py-12 text-xs md:text-base text-muted-foreground">
                   <p>Loading attendance records...</p>
                 </div>
               ) : attendanceRecords.length === 0 ? (
-                <div className="text-center py-12 text-muted-foreground">
-                  <History className="w-16 h-16 mx-auto mb-4 opacity-50" />
-                  <p className="text-lg">No attendance records</p>
-                  <p className="text-sm mt-2">
-                    {filters.employeeId || filters.date || filters.month 
-                      ? "Try adjusting your filters" 
-                      : "Attendance records will appear here"}
-                  </p>
+                <div className="text-center py-8 md:py-12 text-muted-foreground">
+                  <History className="w-12 h-12 md:w-16 md:h-16 mx-auto mb-4 opacity-50" />
+                  <p className="text-base md:text-lg">No attendance records</p>
+                  <p className="text-xs md:text-sm mt-2">Try adjusting your filters</p>
                 </div>
               ) : (
-                <div className="border rounded-lg">
+                <div className="overflow-x-auto">
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Employee ID</TableHead>
-                        <TableHead>Name</TableHead>
-                        <TableHead>Date</TableHead>
-                        <TableHead>Login Time</TableHead>
-                        <TableHead>Logout Time</TableHead>
-                        <TableHead>Duration</TableHead>
+                        <TableHead className="text-xs md:text-sm">Employee</TableHead>
+                        <TableHead className="text-xs md:text-sm hidden sm:table-cell">Date</TableHead>
+                        <TableHead className="text-xs md:text-sm hidden md:table-cell">Login Time</TableHead>
+                        <TableHead className="text-xs md:text-sm hidden lg:table-cell">Logout Time</TableHead>
+                        <TableHead className="text-xs md:text-sm">Duration</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {attendanceRecords.map((record) => (
                         <TableRow key={record.id} data-testid={`row-attendance-${record.id}`}>
-                          <TableCell className="font-medium">{record.employeeId}</TableCell>
-                          <TableCell>{record.name}</TableCell>
-                          <TableCell>{record.date}</TableCell>
-                          <TableCell className="tabular-nums">
-                            {new Date(record.loginTime).toLocaleTimeString('en-US', { 
-                              hour: '2-digit', 
-                              minute: '2-digit' 
-                            })}
-                          </TableCell>
-                          <TableCell className="tabular-nums">
-                            {record.logoutTime
-                              ? new Date(record.logoutTime).toLocaleTimeString('en-US', { 
-                                  hour: '2-digit', 
-                                  minute: '2-digit' 
-                                })
-                              : "--:--"}
-                          </TableCell>
-                          <TableCell className="tabular-nums">
-                            {calculateDuration(record.loginTime, record.logoutTime)}
-                          </TableCell>
+                          <TableCell className="text-xs md:text-sm font-medium max-w-[120px] truncate">{record.name}</TableCell>
+                          <TableCell className="text-xs md:text-sm hidden sm:table-cell">{record.date}</TableCell>
+                          <TableCell className="text-xs md:text-sm hidden md:table-cell tabular-nums">{new Date(record.loginTime).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}</TableCell>
+                          <TableCell className="text-xs md:text-sm hidden lg:table-cell tabular-nums">{record.logoutTime ? new Date(record.logoutTime).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : 'N/A'}</TableCell>
+                          <TableCell className="text-xs md:text-sm font-medium">{calculateDuration(record.loginTime, record.logoutTime)}</TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
