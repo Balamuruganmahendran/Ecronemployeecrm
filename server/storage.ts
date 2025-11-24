@@ -1,14 +1,14 @@
-import {
-  type Employee,
-  type InsertEmployee,
-  type Attendance,
-  type InsertAttendance,
-  type Task,
-  type InsertTask,
-  type LeaveRequest,
-  type InsertLeaveRequest,
+import mongoose from "mongoose";
+import type {
+  Employee,
+  InsertEmployee,
+  Attendance,
+  InsertAttendance,
+  Task,
+  InsertTask,
+  LeaveRequest,
+  InsertLeaveRequest,
 } from "@shared/schema";
-import { randomUUID } from "crypto";
 
 export interface IStorage {
   getEmployee(id: string): Promise<Employee | undefined>;
@@ -40,161 +40,184 @@ export interface IStorage {
   updateLeaveRequest(id: string, request: Partial<InsertLeaveRequest>): Promise<LeaveRequest | undefined>;
 }
 
-export class MemStorage implements IStorage {
-  private employees: Map<string, Employee>;
-  private attendance: Map<string, Attendance>;
-  private tasks: Map<string, Task>;
-  private leaveRequests: Map<string, LeaveRequest>;
+// MongoDB Schemas
+const employeeSchema = new mongoose.Schema({
+  _id: String,
+  employeeId: { type: String, unique: true, required: true },
+  name: { type: String, required: true },
+  password: { type: String, required: true },
+  role: { type: String, enum: ["Admin", "Employee"], required: true },
+}, { _id: false });
 
-  constructor() {
-    this.employees = new Map();
-    this.attendance = new Map();
-    this.tasks = new Map();
-    this.leaveRequests = new Map();
-  }
+const attendanceSchema = new mongoose.Schema({
+  _id: String,
+  employeeId: { type: String, required: true },
+  date: { type: String, required: true },
+  loginTime: { type: Date, required: true },
+  logoutTime: { type: Date, default: null },
+}, { _id: false });
 
+const taskSchema = new mongoose.Schema({
+  _id: String,
+  title: { type: String, required: true },
+  description: { type: String, required: true },
+  assignedTo: { type: String, required: true },
+  dueDate: { type: String, required: true },
+  priority: { type: String, enum: ["Low", "Medium", "High"], required: true },
+  status: { type: String, enum: ["Pending", "Completed"], default: "Pending" },
+}, { _id: false });
+
+const leaveRequestSchema = new mongoose.Schema({
+  _id: String,
+  employeeId: { type: String, required: true },
+  startDate: { type: String, required: true },
+  endDate: { type: String, required: true },
+  reason: { type: String, required: true },
+  appliedDate: { type: String, required: true },
+  status: { type: String, enum: ["Pending", "Approved", "Rejected"], default: "Pending" },
+}, { _id: false });
+
+const EmployeeModel = mongoose.model("Employee", employeeSchema);
+const AttendanceModel = mongoose.model("Attendance", attendanceSchema);
+const TaskModel = mongoose.model("Task", taskSchema);
+const LeaveRequestModel = mongoose.model("LeaveRequest", leaveRequestSchema);
+
+export class MongoStorage implements IStorage {
   async getEmployee(id: string): Promise<Employee | undefined> {
-    return this.employees.get(id);
+    const doc = await EmployeeModel.findById(id).lean();
+    return doc ? { ...doc, id: doc._id } : undefined;
   }
 
   async getEmployeeByEmployeeId(employeeId: string): Promise<Employee | undefined> {
-    return Array.from(this.employees.values()).find(
-      (emp) => emp.employeeId === employeeId,
-    );
+    const doc = await EmployeeModel.findOne({ employeeId }).lean();
+    return doc ? { ...doc, id: doc._id } : undefined;
   }
 
   async getAllEmployees(): Promise<Employee[]> {
-    return Array.from(this.employees.values());
+    const docs = await EmployeeModel.find({}).lean();
+    return docs.map(doc => ({ ...doc, id: doc._id }));
   }
 
   async createEmployee(insertEmployee: InsertEmployee): Promise<Employee> {
-    const id = randomUUID();
-    const employee: Employee = { ...insertEmployee, id };
-    this.employees.set(id, employee);
-    return employee;
+    const id = new mongoose.Types.ObjectId().toString();
+    const doc = await EmployeeModel.create({ _id: id, ...insertEmployee });
+    return { ...doc.toObject(), id: doc._id };
   }
 
   async updateEmployee(id: string, update: Partial<InsertEmployee>): Promise<Employee | undefined> {
-    const employee = this.employees.get(id);
-    if (!employee) return undefined;
-    
-    const updated = { ...employee, ...update };
-    this.employees.set(id, updated);
-    return updated;
+    const doc = await EmployeeModel.findByIdAndUpdate(id, update, { new: true }).lean();
+    return doc ? { ...doc, id: doc._id } : undefined;
   }
 
   async deleteEmployee(id: string): Promise<boolean> {
-    return this.employees.delete(id);
+    const result = await EmployeeModel.deleteOne({ _id: id });
+    return result.deletedCount > 0;
   }
 
   async getAttendance(id: string): Promise<Attendance | undefined> {
-    return this.attendance.get(id);
+    const doc = await AttendanceModel.findById(id).lean();
+    return doc ? { ...doc, id: doc._id } : undefined;
   }
 
   async getAttendanceByEmployeeId(employeeId: string): Promise<Attendance[]> {
-    return Array.from(this.attendance.values()).filter(
-      (att) => att.employeeId === employeeId,
-    );
+    const docs = await AttendanceModel.find({ employeeId }).lean();
+    return docs.map(doc => ({ ...doc, id: doc._id }));
   }
 
   async getAttendanceByDate(date: string): Promise<Attendance[]> {
-    return Array.from(this.attendance.values()).filter(
-      (att) => att.date === date,
-    );
+    const docs = await AttendanceModel.find({ date }).lean();
+    return docs.map(doc => ({ ...doc, id: doc._id }));
   }
 
   async getAttendanceByMonth(month: string): Promise<Attendance[]> {
-    return Array.from(this.attendance.values()).filter(
-      (att) => att.date.startsWith(month),
-    );
+    const docs = await AttendanceModel.find({ date: { $regex: `^${month}` } }).lean();
+    return docs.map(doc => ({ ...doc, id: doc._id }));
   }
 
   async getTodayAttendance(employeeId: string): Promise<Attendance | undefined> {
     const today = new Date().toISOString().split('T')[0];
-    return Array.from(this.attendance.values()).find(
-      (att) => att.employeeId === employeeId && att.date === today,
-    );
+    const doc = await AttendanceModel.findOne({ employeeId, date: today }).lean();
+    return doc ? { ...doc, id: doc._id } : undefined;
   }
 
   async createAttendance(insertAttendance: InsertAttendance): Promise<Attendance> {
-    const id = randomUUID();
-    const attendance: Attendance = { ...insertAttendance, id };
-    this.attendance.set(id, attendance);
-    return attendance;
+    const id = new mongoose.Types.ObjectId().toString();
+    const doc = await AttendanceModel.create({ _id: id, ...insertAttendance });
+    return { ...doc.toObject(), id: doc._id };
   }
 
   async updateAttendance(id: string, update: Partial<InsertAttendance>): Promise<Attendance | undefined> {
-    const attendance = this.attendance.get(id);
-    if (!attendance) return undefined;
-    
-    const updated = { ...attendance, ...update };
-    this.attendance.set(id, updated);
-    return updated;
+    const doc = await AttendanceModel.findByIdAndUpdate(id, update, { new: true }).lean();
+    return doc ? { ...doc, id: doc._id } : undefined;
   }
 
   async getAllAttendance(): Promise<Attendance[]> {
-    return Array.from(this.attendance.values());
+    const docs = await AttendanceModel.find({}).lean();
+    return docs.map(doc => ({ ...doc, id: doc._id }));
   }
 
   async getTask(id: string): Promise<Task | undefined> {
-    return this.tasks.get(id);
+    const doc = await TaskModel.findById(id).lean();
+    return doc ? { ...doc, id: doc._id } : undefined;
   }
 
   async getTasksByEmployee(employeeId: string): Promise<Task[]> {
-    return Array.from(this.tasks.values()).filter(
-      (task) => task.assignedTo === employeeId,
-    );
+    const docs = await TaskModel.find({ assignedTo: employeeId }).lean();
+    return docs.map(doc => ({ ...doc, id: doc._id }));
   }
 
   async getAllTasks(): Promise<Task[]> {
-    return Array.from(this.tasks.values());
+    const docs = await TaskModel.find({}).lean();
+    return docs.map(doc => ({ ...doc, id: doc._id }));
   }
 
   async createTask(insertTask: InsertTask): Promise<Task> {
-    const id = randomUUID();
-    const task: Task = { ...insertTask, id };
-    this.tasks.set(id, task);
-    return task;
+    const id = new mongoose.Types.ObjectId().toString();
+    const doc = await TaskModel.create({ _id: id, ...insertTask });
+    return { ...doc.toObject(), id: doc._id };
   }
 
   async updateTask(id: string, update: Partial<InsertTask>): Promise<Task | undefined> {
-    const task = this.tasks.get(id);
-    if (!task) return undefined;
-    
-    const updated = { ...task, ...update };
-    this.tasks.set(id, updated);
-    return updated;
+    const doc = await TaskModel.findByIdAndUpdate(id, update, { new: true }).lean();
+    return doc ? { ...doc, id: doc._id } : undefined;
   }
 
   async getLeaveRequest(id: string): Promise<LeaveRequest | undefined> {
-    return this.leaveRequests.get(id);
+    const doc = await LeaveRequestModel.findById(id).lean();
+    return doc ? { ...doc, id: doc._id } : undefined;
   }
 
   async getLeaveRequestsByEmployee(employeeId: string): Promise<LeaveRequest[]> {
-    return Array.from(this.leaveRequests.values()).filter(
-      (req) => req.employeeId === employeeId,
-    );
+    const docs = await LeaveRequestModel.find({ employeeId }).lean();
+    return docs.map(doc => ({ ...doc, id: doc._id }));
   }
 
   async getAllLeaveRequests(): Promise<LeaveRequest[]> {
-    return Array.from(this.leaveRequests.values());
+    const docs = await LeaveRequestModel.find({}).lean();
+    return docs.map(doc => ({ ...doc, id: doc._id }));
   }
 
   async createLeaveRequest(insertRequest: InsertLeaveRequest): Promise<LeaveRequest> {
-    const id = randomUUID();
-    const request: LeaveRequest = { ...insertRequest, id };
-    this.leaveRequests.set(id, request);
-    return request;
+    const id = new mongoose.Types.ObjectId().toString();
+    const doc = await LeaveRequestModel.create({ _id: id, ...insertRequest });
+    return { ...doc.toObject(), id: doc._id };
   }
 
   async updateLeaveRequest(id: string, update: Partial<InsertLeaveRequest>): Promise<LeaveRequest | undefined> {
-    const request = this.leaveRequests.get(id);
-    if (!request) return undefined;
-    
-    const updated = { ...request, ...update };
-    this.leaveRequests.set(id, updated);
-    return updated;
+    const doc = await LeaveRequestModel.findByIdAndUpdate(id, update, { new: true }).lean();
+    return doc ? { ...doc, id: doc._id } : undefined;
   }
 }
 
-export const storage = new MemStorage();
+export let storage: IStorage;
+
+export async function initializeStorage() {
+  const mongoUri = process.env.MONGODB_URI;
+  if (!mongoUri) {
+    throw new Error("MONGODB_URI environment variable is not set");
+  }
+  
+  await mongoose.connect(mongoUri);
+  storage = new MongoStorage();
+  console.log("✅ Connected to MongoDB");
+}

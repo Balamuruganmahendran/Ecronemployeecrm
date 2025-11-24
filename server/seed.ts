@@ -1,5 +1,5 @@
-import { storage } from "./storage";
 import bcrypt from "bcryptjs";
+import { storage } from "./storage";
 
 export async function seedDatabase() {
   // Check if admin already exists

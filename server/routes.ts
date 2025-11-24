@@ -74,168 +74,216 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const token = jwt.sign(
         { id: employee.id, employeeId: employee.employeeId, role: employee.role },
         JWT_SECRET,
-        { expiresIn: "24h" }
+        { expiresIn: "7d" }
       );
 
-      const { password: _, ...employeeWithoutPassword } = employee;
-      res.json({ employee: employeeWithoutPassword, token });
+      res.json({
+        token,
+        employee: {
+          id: employee.id,
+          employeeId: employee.employeeId,
+          name: employee.name,
+          role: employee.role,
+        },
+      });
     } catch (error) {
-      res.status(500).json({ error: "Login failed" });
+      res.status(500).json({ error: "Internal server error" });
     }
   });
 
-  app.get("/api/auth/me", authenticate, async (req: AuthRequest, res) => {
-    const employee = await storage.getEmployee(req.employee!.id);
-    if (!employee) {
-      return res.status(404).json({ error: "Employee not found" });
-    }
-    const { password: _, ...employeeWithoutPassword } = employee;
-    res.json(employeeWithoutPassword);
-  });
-
-  // ==================== EMPLOYEES (ADMIN ONLY) ====================
+  // ==================== EMPLOYEES ====================
   
   app.get("/api/employees", authenticate, requireAdmin, async (req, res) => {
     try {
       const employees = await storage.getAllEmployees();
-      const employeesWithoutPasswords = employees.map(({ password, ...emp }) => emp);
-      res.json(employeesWithoutPasswords);
+      const safeEmployees = employees.map(emp => ({
+        id: emp.id,
+        employeeId: emp.employeeId,
+        name: emp.name,
+        role: emp.role,
+      }));
+      res.json(safeEmployees);
     } catch (error) {
-      res.status(500).json({ error: "Failed to fetch employees" });
+      res.status(500).json({ error: "Internal server error" });
     }
   });
 
   app.post("/api/employees", authenticate, requireAdmin, async (req, res) => {
     try {
-      const data = insertEmployeeSchema.parse(req.body);
-      
-      const existing = await storage.getEmployeeByEmployeeId(data.employeeId);
-      if (existing) {
+      const validation = insertEmployeeSchema.safeParse(req.body);
+      if (!validation.success) {
+        return res.status(400).json({ error: validation.error.message });
+      }
+
+      const existingEmployee = await storage.getEmployeeByEmployeeId(req.body.employeeId);
+      if (existingEmployee) {
         return res.status(400).json({ error: "Employee ID already exists" });
       }
 
-      const hashedPassword = await bcrypt.hash(data.password, 10);
+      const hashedPassword = await bcrypt.hash(req.body.password, 10);
       const employee = await storage.createEmployee({
-        ...data,
+        ...req.body,
         password: hashedPassword,
       });
 
-      const { password: _, ...employeeWithoutPassword } = employee;
-      res.status(201).json(employeeWithoutPassword);
-    } catch (error: any) {
-      res.status(400).json({ error: error.message || "Failed to create employee" });
+      res.status(201).json({
+        id: employee.id,
+        employeeId: employee.employeeId,
+        name: employee.name,
+        role: employee.role,
+      });
+    } catch (error) {
+      res.status(500).json({ error: "Internal server error" });
     }
   });
 
   app.put("/api/employees/:id", authenticate, requireAdmin, async (req, res) => {
     try {
-      const { id } = req.params;
-      const data = req.body;
-
-      if (data.password) {
-        data.password = await bcrypt.hash(data.password, 10);
-      }
-
-      const employee = await storage.updateEmployee(id, data);
+      const employee = await storage.getEmployee(req.params.id);
       if (!employee) {
         return res.status(404).json({ error: "Employee not found" });
       }
 
-      const { password: _, ...employeeWithoutPassword } = employee;
-      res.json(employeeWithoutPassword);
+      const updateData: any = {};
+      if (req.body.name) updateData.name = req.body.name;
+      if (req.body.role) updateData.role = req.body.role;
+      if (req.body.password) {
+        updateData.password = await bcrypt.hash(req.body.password, 10);
+      }
+
+      const updated = await storage.updateEmployee(req.params.id, updateData);
+      res.json({
+        id: updated!.id,
+        employeeId: updated!.employeeId,
+        name: updated!.name,
+        role: updated!.role,
+      });
     } catch (error) {
-      res.status(400).json({ error: "Failed to update employee" });
+      res.status(500).json({ error: "Internal server error" });
     }
   });
 
   app.delete("/api/employees/:id", authenticate, requireAdmin, async (req, res) => {
     try {
-      const { id } = req.params;
-      const success = await storage.deleteEmployee(id);
-      
-      if (!success) {
+      const employee = await storage.getEmployee(req.params.id);
+      if (!employee) {
         return res.status(404).json({ error: "Employee not found" });
       }
 
+      await storage.deleteEmployee(req.params.id);
       res.json({ success: true });
     } catch (error) {
-      res.status(500).json({ error: "Failed to delete employee" });
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // ==================== TASKS ====================
+  
+  app.get("/api/tasks", authenticate, async (req, res) => {
+    try {
+      if (req.employee?.role === "Admin") {
+        const tasks = await storage.getAllTasks();
+        res.json(tasks);
+      } else {
+        const tasks = await storage.getTasksByEmployee(req.employee!.employeeId);
+        res.json(tasks);
+      }
+    } catch (error) {
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.post("/api/tasks", authenticate, requireAdmin, async (req, res) => {
+    try {
+      const validation = insertTaskSchema.safeParse(req.body);
+      if (!validation.success) {
+        return res.status(400).json({ error: validation.error.message });
+      }
+
+      const task = await storage.createTask(req.body);
+      res.status(201).json(task);
+    } catch (error) {
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.patch("/api/tasks/:id", authenticate, async (req, res) => {
+    try {
+      const task = await storage.getTask(req.params.id);
+      if (!task) {
+        return res.status(404).json({ error: "Task not found" });
+      }
+
+      if (req.employee?.role !== "Admin" && task.assignedTo !== req.employee?.employeeId) {
+        return res.status(403).json({ error: "Access denied" });
+      }
+
+      const updated = await storage.updateTask(req.params.id, req.body);
+      res.json(updated);
+    } catch (error) {
+      res.status(500).json({ error: "Internal server error" });
     }
   });
 
   // ==================== ATTENDANCE ====================
   
-  app.post("/api/attendance/login", authenticate, async (req: AuthRequest, res) => {
+  app.post("/api/attendance/login", authenticate, async (req, res) => {
     try {
       const today = new Date().toISOString().split('T')[0];
-      const existing = await storage.getTodayAttendance(req.employee!.employeeId);
+      const todayAttendance = await storage.getTodayAttendance(req.employee!.employeeId);
       
-      if (existing) {
-        return res.status(400).json({ error: "Already marked present today" });
+      if (todayAttendance) {
+        return res.status(400).json({ error: "Already logged in today" });
       }
 
       const attendance = await storage.createAttendance({
         employeeId: req.employee!.employeeId,
+        date: today,
         loginTime: new Date(),
         logoutTime: null,
-        date: today,
       });
 
       res.status(201).json(attendance);
     } catch (error) {
-      res.status(500).json({ error: "Failed to mark attendance" });
+      res.status(500).json({ error: "Internal server error" });
     }
   });
 
-  app.post("/api/attendance/logout", authenticate, async (req: AuthRequest, res) => {
+  app.post("/api/attendance/logout", authenticate, async (req, res) => {
     try {
       const today = new Date().toISOString().split('T')[0];
-      const attendance = await storage.getTodayAttendance(req.employee!.employeeId);
+      const todayAttendance = await storage.getTodayAttendance(req.employee!.employeeId);
       
-      if (!attendance) {
-        return res.status(400).json({ error: "No login record found for today" });
+      if (!todayAttendance) {
+        return res.status(404).json({ error: "No login record found for today" });
       }
 
-      if (attendance.logoutTime) {
-        return res.status(400).json({ error: "Already logged out" });
-      }
-
-      const updated = await storage.updateAttendance(attendance.id, {
+      const updated = await storage.updateAttendance(todayAttendance.id, {
         logoutTime: new Date(),
       });
 
       res.json(updated);
     } catch (error) {
-      res.status(500).json({ error: "Failed to mark logout" });
+      res.status(500).json({ error: "Internal server error" });
     }
   });
 
-  app.get("/api/attendance/today", authenticate, async (req: AuthRequest, res) => {
-    try {
-      const attendance = await storage.getTodayAttendance(req.employee!.employeeId);
-      res.json(attendance || null);
-    } catch (error) {
-      res.status(500).json({ error: "Failed to fetch attendance" });
-    }
-  });
-
-  app.get("/api/attendance", authenticate, requireAdmin, async (req, res) => {
+  app.get("/api/attendance", authenticate, async (req, res) => {
     try {
       const { employeeId, date, month } = req.query;
-      
-      let records;
-      if (month) {
-        records = await storage.getAttendanceByMonth(month as string);
-      } else if (date) {
+
+      let records = await storage.getAllAttendance();
+
+      if (date) {
         records = await storage.getAttendanceByDate(date as string);
+      } else if (month) {
+        records = await storage.getAttendanceByMonth(month as string);
       } else if (employeeId) {
         records = await storage.getAttendanceByEmployeeId(employeeId as string);
-      } else {
-        records = await storage.getAllAttendance();
       }
 
-      // Enrich with employee names
-      const enriched = await Promise.all(
+      // Add employee names
+      const enrichedRecords = await Promise.all(
         records.map(async (record) => {
           const employee = await storage.getEmployeeByEmployeeId(record.employeeId);
           return {
@@ -245,9 +293,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         })
       );
 
-      res.json(enriched);
+      res.json(enrichedRecords);
     } catch (error) {
-      res.status(500).json({ error: "Failed to fetch attendance" });
+      res.status(500).json({ error: "Internal server error" });
     }
   });
 
@@ -255,245 +303,158 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const today = new Date().toISOString().split('T')[0];
       const todayRecords = await storage.getAttendanceByDate(today);
-      const allEmployees = await storage.getAllEmployees();
+      const employees = await storage.getAllEmployees();
+      const presentEmployees = new Set(todayRecords.map(r => r.employeeId));
 
-      const stats = {
-        totalEmployees: allEmployees.length,
-        presentToday: todayRecords.length,
-        absentToday: allEmployees.length - todayRecords.length,
-      };
-
-      res.json(stats);
-    } catch (error) {
-      res.status(500).json({ error: "Failed to fetch stats" });
-    }
-  });
-
-  app.get("/api/attendance/export/csv", authenticate, requireAdmin, async (req, res) => {
-    try {
-      const { month } = req.query;
-      const records = month 
-        ? await storage.getAttendanceByMonth(month as string)
-        : await storage.getAllAttendance();
-
-      const enriched = await Promise.all(
-        records.map(async (record) => {
-          const employee = await storage.getEmployeeByEmployeeId(record.employeeId);
-          return {
-            "Employee ID": record.employeeId,
-            "Name": employee?.name || "Unknown",
-            "Date": record.date,
-            "Login Time": record.loginTime ? new Date(record.loginTime).toLocaleTimeString() : "",
-            "Logout Time": record.logoutTime ? new Date(record.logoutTime).toLocaleTimeString() : "",
-          };
-        })
-      );
-
-      const csv = [
-        Object.keys(enriched[0] || {}).join(","),
-        ...enriched.map(row => Object.values(row).join(","))
-      ].join("\n");
-
-      res.setHeader("Content-Type", "text/csv");
-      res.setHeader("Content-Disposition", "attachment; filename=attendance.csv");
-      res.send(csv);
-    } catch (error) {
-      res.status(500).json({ error: "Failed to export CSV" });
-    }
-  });
-
-  app.get("/api/attendance/export/excel", authenticate, requireAdmin, async (req, res) => {
-    try {
-      const { month } = req.query;
-      const records = month 
-        ? await storage.getAttendanceByMonth(month as string)
-        : await storage.getAllAttendance();
-
-      const enriched = await Promise.all(
-        records.map(async (record) => {
-          const employee = await storage.getEmployeeByEmployeeId(record.employeeId);
-          return {
-            "Employee ID": record.employeeId,
-            "Name": employee?.name || "Unknown",
-            "Date": record.date,
-            "Login Time": record.loginTime ? new Date(record.loginTime).toLocaleTimeString() : "",
-            "Logout Time": record.logoutTime ? new Date(record.logoutTime).toLocaleTimeString() : "",
-          };
-        })
-      );
-
-      const worksheet = XLSX.utils.json_to_sheet(enriched);
-      const workbook = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(workbook, worksheet, "Attendance");
-
-      const buffer = XLSX.write(workbook, { type: "buffer", bookType: "xlsx" });
-
-      res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
-      res.setHeader("Content-Disposition", "attachment; filename=attendance.xlsx");
-      res.send(buffer);
-    } catch (error) {
-      res.status(500).json({ error: "Failed to export Excel" });
-    }
-  });
-
-  app.get("/api/attendance/working-days", authenticate, async (req: AuthRequest, res) => {
-    try {
-      const records = await storage.getAttendanceByEmployeeId(req.employee!.employeeId);
-      res.json({ workingDays: records.length });
-    } catch (error) {
-      res.status(500).json({ error: "Failed to fetch working days" });
-    }
-  });
-
-  // ==================== TASKS ====================
-  
-  app.get("/api/tasks", authenticate, async (req: AuthRequest, res) => {
-    try {
-      const tasks = req.employee!.role === "Admin"
-        ? await storage.getAllTasks()
-        : await storage.getTasksByEmployee(req.employee!.employeeId);
-      
-      res.json(tasks);
-    } catch (error) {
-      res.status(500).json({ error: "Failed to fetch tasks" });
-    }
-  });
-
-  app.post("/api/tasks", authenticate, requireAdmin, async (req, res) => {
-    try {
-      const data = insertTaskSchema.parse({
-        ...req.body,
-        assignedDate: new Date().toISOString().split('T')[0],
-        status: "Pending",
+      res.json({
+        totalEmployees: employees.length,
+        presentToday: presentEmployees.size,
+        absentToday: employees.length - presentEmployees.size,
       });
-
-      const task = await storage.createTask(data);
-      res.status(201).json(task);
-    } catch (error: any) {
-      res.status(400).json({ error: error.message || "Failed to create task" });
+    } catch (error) {
+      res.status(500).json({ error: "Internal server error" });
     }
   });
 
-  app.patch("/api/tasks/:id", authenticate, async (req: AuthRequest, res) => {
+  app.get("/api/attendance/export/:format", authenticate, requireAdmin, async (req, res) => {
     try {
-      const { id } = req.params;
-      const { status } = req.body;
+      const { format } = req.params;
+      const { month } = req.query;
 
-      const task = await storage.getTask(id);
-      if (!task) {
-        return res.status(404).json({ error: "Task not found" });
+      let records = await storage.getAllAttendance();
+      if (month) {
+        records = await storage.getAttendanceByMonth(month as string);
       }
 
-      if (req.employee!.role !== "Admin" && task.assignedTo !== req.employee!.employeeId) {
-        return res.status(403).json({ error: "Access denied" });
-      }
+      const enrichedRecords = await Promise.all(
+        records.map(async (record) => {
+          const employee = await storage.getEmployeeByEmployeeId(record.employeeId);
+          return {
+            EmployeeID: record.employeeId,
+            Name: employee?.name || "Unknown",
+            Date: record.date,
+            LoginTime: new Date(record.loginTime).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+            LogoutTime: record.logoutTime ? new Date(record.logoutTime).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : "N/A",
+          };
+        })
+      );
 
-      const updated = await storage.updateTask(id, { status });
-      res.json(updated);
+      if (format === "csv") {
+        const csv = [
+          Object.keys(enrichedRecords[0] || {}).join(","),
+          ...enrichedRecords.map(r => Object.values(r).join(",")),
+        ].join("\n");
+
+        res.setHeader("Content-Type", "text/csv");
+        res.setHeader("Content-Disposition", `attachment; filename="attendance-${month || new Date().toISOString().split('T')[0]}.csv"`);
+        res.send(csv);
+      } else if (format === "excel") {
+        const ws = XLSX.utils.json_to_sheet(enrichedRecords);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Attendance");
+        
+        const buffer = XLSX.write(wb, { bookType: "xlsx", type: "buffer" });
+        res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+        res.setHeader("Content-Disposition", `attachment; filename="attendance-${month || new Date().toISOString().split('T')[0]}.xlsx"`);
+        res.send(buffer);
+      } else {
+        res.status(400).json({ error: "Invalid format" });
+      }
     } catch (error) {
-      res.status(400).json({ error: "Failed to update task" });
+      res.status(500).json({ error: "Internal server error" });
     }
   });
 
   // ==================== LEAVE REQUESTS ====================
   
-  app.get("/api/leave-requests", authenticate, async (req: AuthRequest, res) => {
+  app.get("/api/leave-requests", authenticate, async (req, res) => {
     try {
-      const requests = req.employee!.role === "Admin"
-        ? await storage.getAllLeaveRequests()
-        : await storage.getLeaveRequestsByEmployee(req.employee!.employeeId);
-      
-      res.json(requests);
+      if (req.employee?.role === "Admin") {
+        const requests = await storage.getAllLeaveRequests();
+        res.json(requests);
+      } else {
+        const requests = await storage.getLeaveRequestsByEmployee(req.employee!.employeeId);
+        res.json(requests);
+      }
     } catch (error) {
-      res.status(500).json({ error: "Failed to fetch leave requests" });
+      res.status(500).json({ error: "Internal server error" });
     }
   });
 
-  app.post("/api/leave-requests", authenticate, async (req: AuthRequest, res) => {
+  app.post("/api/leave-requests", authenticate, async (req, res) => {
     try {
-      const data = insertLeaveRequestSchema.parse({
+      const validation = insertLeaveRequestSchema.safeParse(req.body);
+      if (!validation.success) {
+        return res.status(400).json({ error: validation.error.message });
+      }
+
+      const request = await storage.createLeaveRequest({
         ...req.body,
         employeeId: req.employee!.employeeId,
-        status: "Pending",
-        appliedDate: new Date().toISOString().split('T')[0],
       });
 
-      const request = await storage.createLeaveRequest(data);
       res.status(201).json(request);
-    } catch (error: any) {
-      res.status(400).json({ error: error.message || "Failed to create leave request" });
+    } catch (error) {
+      res.status(500).json({ error: "Internal server error" });
     }
   });
 
   app.patch("/api/leave-requests/:id", authenticate, requireAdmin, async (req, res) => {
     try {
-      const { id } = req.params;
-      const { status } = req.body;
-
-      if (!["Approved", "Rejected"].includes(status)) {
-        return res.status(400).json({ error: "Invalid status" });
-      }
-
-      const updated = await storage.updateLeaveRequest(id, { status });
-      if (!updated) {
+      const request = await storage.getLeaveRequest(req.params.id);
+      if (!request) {
         return res.status(404).json({ error: "Leave request not found" });
       }
 
+      const updated = await storage.updateLeaveRequest(req.params.id, req.body);
       res.json(updated);
     } catch (error) {
-      res.status(400).json({ error: "Failed to update leave request" });
+      res.status(500).json({ error: "Internal server error" });
     }
   });
 
-  // ==================== ANALYTICS (ADMIN ONLY) ====================
+  // ==================== ANALYTICS ====================
   
   app.get("/api/analytics", authenticate, requireAdmin, async (req, res) => {
     try {
-      const allAttendance = await storage.getAllAttendance();
+      const allRecords = await storage.getAllAttendance();
       const allTasks = await storage.getAllTasks();
       const allLeaveRequests = await storage.getAllLeaveRequests();
 
-      // Monthly attendance data (last 6 months)
-      const monthlyAttendance = Array.from({ length: 6 }, (_, i) => {
-        const date = new Date();
-        date.setMonth(date.getMonth() - i);
-        const month = date.toISOString().slice(0, 7);
-        const count = allAttendance.filter(att => att.date.startsWith(month)).length;
-        return {
-          month: date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
-          count,
-        };
-      }).reverse();
+      // Monthly attendance
+      const monthlyMap: { [key: string]: number } = {};
+      allRecords.forEach(r => {
+        const month = r.date.substring(0, 7);
+        monthlyMap[month] = (monthlyMap[month] || 0) + 1;
+      });
+      const monthlyAttendance = Object.entries(monthlyMap)
+        .map(([month, count]) => ({ month, count }))
+        .sort((a, b) => a.month.localeCompare(b.month));
 
-      // Task completion rate
+      // Task completion
       const completedTasks = allTasks.filter(t => t.status === "Completed").length;
-      const taskCompletionRate = allTasks.length > 0 
-        ? Math.round((completedTasks / allTasks.length) * 100)
-        : 0;
+      const taskCompletion = {
+        total: allTasks.length,
+        completed: completedTasks,
+        rate: allTasks.length > 0 ? Math.round((completedTasks / allTasks.length) * 100) : 0,
+      };
 
-      // Leave request analytics
-      const pendingLeaves = allLeaveRequests.filter(r => r.status === "Pending").length;
-      const approvedLeaves = allLeaveRequests.filter(r => r.status === "Approved").length;
-      const rejectedLeaves = allLeaveRequests.filter(r => r.status === "Rejected").length;
+      // Leave analytics
+      const leaveRequests = {
+        pending: allLeaveRequests.filter(r => r.status === "Pending").length,
+        approved: allLeaveRequests.filter(r => r.status === "Approved").length,
+        rejected: allLeaveRequests.filter(r => r.status === "Rejected").length,
+      };
 
       res.json({
         monthlyAttendance,
-        taskCompletion: {
-          total: allTasks.length,
-          completed: completedTasks,
-          rate: taskCompletionRate,
-        },
-        leaveRequests: {
-          pending: pendingLeaves,
-          approved: approvedLeaves,
-          rejected: rejectedLeaves,
-        },
+        taskCompletion,
+        leaveRequests,
       });
     } catch (error) {
-      res.status(500).json({ error: "Failed to fetch analytics" });
+      res.status(500).json({ error: "Internal server error" });
     }
   });
 
-  const httpServer = createServer(app);
-  return httpServer;
+  return createServer(app);
 }
