@@ -92,24 +92,24 @@ export default function AdminTasksPage() {
 
   return (
     <ProtectedRoute adminOnly>
-      <div className="flex min-h-screen bg-background">
+      <div className="flex flex-col md:flex-row min-h-screen bg-background">
         <AdminSidebar />
-        <main className="flex-1 p-8 space-y-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-semibold">Task Management</h1>
-              <p className="text-muted-foreground mt-2">
+        <main className="flex-1 p-4 md:p-8 space-y-4 md:space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div className="min-w-0">
+              <h1 className="text-2xl md:text-3xl font-semibold">Task Management</h1>
+              <p className="text-xs md:text-base text-muted-foreground mt-2">
                 Assign and track tasks for employees
               </p>
             </div>
             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
               <DialogTrigger asChild>
-                <Button className="gap-2" data-testid="button-assign-task">
+                <Button className="gap-2 w-full sm:w-auto" data-testid="button-assign-task">
                   <Plus className="w-4 h-4" />
                   Assign Task
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-w-2xl">
+              <DialogContent className="max-w-2xl w-[95vw] max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
                   <DialogTitle>Assign New Task</DialogTitle>
                   <DialogDescription>
@@ -187,15 +187,21 @@ export default function AdminTasksPage() {
                       </Select>
                     </div>
                   </div>
-                  <DialogFooter>
+                  <DialogFooter className="flex gap-2 sm:gap-0">
                     <Button
                       type="button"
                       variant="outline"
                       onClick={() => setIsDialogOpen(false)}
+                      className="flex-1 sm:flex-initial"
                     >
                       Cancel
                     </Button>
-                    <Button type="submit" disabled={createMutation.isPending || !formData.assignedTo} data-testid="button-submit">
+                    <Button 
+                      type="submit" 
+                      disabled={createMutation.isPending || !formData.assignedTo}
+                      className="flex-1 sm:flex-initial"
+                      data-testid="button-submit"
+                    >
                       {createMutation.isPending ? "Assigning..." : "Assign Task"}
                     </Button>
                   </DialogFooter>
@@ -205,27 +211,27 @@ export default function AdminTasksPage() {
           </div>
 
           <Card>
-            <CardContent className="p-6">
+            <CardContent className="p-4 md:p-6">
               {isLoading ? (
-                <div className="text-center py-12 text-muted-foreground">
+                <div className="text-center py-8 md:py-12 text-sm md:text-base text-muted-foreground">
                   <p>Loading tasks...</p>
                 </div>
               ) : tasks.length === 0 ? (
-                <div className="text-center py-12 text-muted-foreground">
-                  <ClipboardList className="w-16 h-16 mx-auto mb-4 opacity-50" />
-                  <p className="text-lg">No tasks assigned yet</p>
-                  <p className="text-sm mt-2">Click "Assign Task" to create your first task</p>
+                <div className="text-center py-8 md:py-12 text-muted-foreground">
+                  <ClipboardList className="w-12 h-12 md:w-16 md:h-16 mx-auto mb-4 opacity-50" />
+                  <p className="text-base md:text-lg">No tasks assigned yet</p>
+                  <p className="text-xs md:text-sm mt-2">Click "Assign Task" to create your first task</p>
                 </div>
               ) : (
-                <div className="border rounded-lg">
+                <div className="overflow-x-auto">
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Title</TableHead>
-                        <TableHead>Assigned To</TableHead>
-                        <TableHead>Due Date</TableHead>
-                        <TableHead>Priority</TableHead>
-                        <TableHead>Status</TableHead>
+                        <TableHead className="text-xs md:text-sm">Title</TableHead>
+                        <TableHead className="text-xs md:text-sm hidden sm:table-cell">Assigned To</TableHead>
+                        <TableHead className="text-xs md:text-sm hidden md:table-cell">Due Date</TableHead>
+                        <TableHead className="text-xs md:text-sm">Priority</TableHead>
+                        <TableHead className="text-xs md:text-sm">Status</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -233,16 +239,16 @@ export default function AdminTasksPage() {
                         const employee = employees.find(e => e.employeeId === task.assignedTo);
                         return (
                           <TableRow key={task.id} data-testid={`row-task-${task.id}`}>
-                            <TableCell className="font-medium">{task.title}</TableCell>
-                            <TableCell>{employee?.name || task.assignedTo}</TableCell>
-                            <TableCell>{task.dueDate}</TableCell>
+                            <TableCell className="font-medium text-xs md:text-sm max-w-[150px] md:max-w-none truncate">{task.title}</TableCell>
+                            <TableCell className="text-xs md:text-sm hidden sm:table-cell">{employee?.name || task.assignedTo}</TableCell>
+                            <TableCell className="text-xs md:text-sm hidden md:table-cell">{task.dueDate}</TableCell>
                             <TableCell>
                               <span className={`text-xs font-medium px-2 py-1 rounded ${
                                 task.priority === 'High' 
-                                  ? 'bg-red-100 text-red-800' 
+                                  ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' 
                                   : task.priority === 'Medium'
-                                  ? 'bg-yellow-100 text-yellow-800'
-                                  : 'bg-green-100 text-green-800'
+                                  ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
+                                  : 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
                               }`}>
                                 {task.priority}
                               </span>
