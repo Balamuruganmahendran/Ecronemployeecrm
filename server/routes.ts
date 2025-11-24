@@ -456,5 +456,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ==================== REMINDERS ====================
+  
+  app.get("/api/reminders", authenticate, async (req, res) => {
+    try {
+      const reminders = await storage.getAllReminders();
+      res.json(reminders);
+    } catch (error) {
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.post("/api/reminders", authenticate, requireAdmin, async (req, res) => {
+    try {
+      const { title, description, reminderDate, importance } = req.body;
+      
+      if (!title || !description || !reminderDate || !importance) {
+        return res.status(400).json({ error: "Missing required fields" });
+      }
+
+      const reminder = await storage.createReminder({
+        title,
+        description,
+        reminderDate,
+        importance,
+        createdAt: new Date().toISOString(),
+      });
+
+      res.status(201).json(reminder);
+    } catch (error) {
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.delete("/api/reminders/:id", authenticate, requireAdmin, async (req, res) => {
+    try {
+      const reminder = await storage.getReminder(req.params.id);
+      if (!reminder) {
+        return res.status(404).json({ error: "Reminder not found" });
+      }
+
+      await storage.deleteReminder(req.params.id);
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
   return createServer(app);
 }
