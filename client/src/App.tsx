@@ -15,7 +15,6 @@ import AdminLeavesPage from "@/pages/admin-leaves";
 import AdminAttendancePage from "@/pages/admin-attendance";
 import AdminAnalyticsPage from "@/pages/admin-analytics";
 import AdminRemindersPage from "@/pages/admin-reminders";
-import { ThemeProvider } from "@/lib/theme-provider";
 
 function Router() {
   return (
@@ -39,12 +38,10 @@ function Router() {
 export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <ThemeProvider>
-        <TooltipProvider>
-          <Router />
-          <Toaster />
-        </TooltipProvider>
-      </ThemeProvider>
+      <TooltipProvider>
+        <Router />
+        <Toaster />
+      </TooltipProvider>
     </QueryClientProvider>
   );
 }

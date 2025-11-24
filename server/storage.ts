@@ -8,6 +8,8 @@ import type {
   InsertTask,
   LeaveRequest,
   InsertLeaveRequest,
+  Reminder,
+  InsertReminder,
 } from "@shared/schema";
 
 export interface IStorage {
@@ -38,6 +40,11 @@ export interface IStorage {
   getAllLeaveRequests(): Promise<LeaveRequest[]>;
   createLeaveRequest(request: InsertLeaveRequest): Promise<LeaveRequest>;
   updateLeaveRequest(id: string, request: Partial<InsertLeaveRequest>): Promise<LeaveRequest | undefined>;
+
+  getReminder(id: string): Promise<Reminder | undefined>;
+  getAllReminders(): Promise<Reminder[]>;
+  createReminder(reminder: InsertReminder): Promise<Reminder>;
+  deleteReminder(id: string): Promise<boolean>;
 }
 
 // MongoDB Schemas
@@ -62,6 +69,7 @@ const taskSchema = new mongoose.Schema({
   title: { type: String, required: true },
   description: { type: String, required: true },
   assignedTo: { type: String, required: true },
+  assignedDate: { type: String, required: true },
   dueDate: { type: String, required: true },
   priority: { type: String, enum: ["Low", "Medium", "High"], required: true },
   status: { type: String, enum: ["Pending", "Completed"], default: "Pending" },
@@ -77,10 +85,20 @@ const leaveRequestSchema = new mongoose.Schema({
   status: { type: String, enum: ["Pending", "Approved", "Rejected"], default: "Pending" },
 }, { _id: false });
 
+const reminderSchema = new mongoose.Schema({
+  _id: String,
+  title: { type: String, required: true },
+  description: { type: String, required: true },
+  reminderDate: { type: String, required: true },
+  importance: { type: String, enum: ["Low", "Medium", "High"], required: true },
+  createdAt: { type: String, required: true },
+}, { _id: false });
+
 const EmployeeModel = mongoose.model("Employee", employeeSchema);
 const AttendanceModel = mongoose.model("Attendance", attendanceSchema);
 const TaskModel = mongoose.model("Task", taskSchema);
 const LeaveRequestModel = mongoose.model("LeaveRequest", leaveRequestSchema);
+const ReminderModel = mongoose.model("Reminder", reminderSchema);
 
 export class MongoStorage implements IStorage {
   async getEmployee(id: string): Promise<Employee | undefined> {
@@ -206,6 +224,27 @@ export class MongoStorage implements IStorage {
   async updateLeaveRequest(id: string, update: Partial<InsertLeaveRequest>): Promise<LeaveRequest | undefined> {
     const doc = await LeaveRequestModel.findByIdAndUpdate(id, update, { new: true }).lean();
     return doc ? { ...doc, id: doc._id } : undefined;
+  }
+
+  async getReminder(id: string): Promise<Reminder | undefined> {
+    const doc = await ReminderModel.findById(id).lean();
+    return doc ? { ...doc, id: doc._id } : undefined;
+  }
+
+  async getAllReminders(): Promise<Reminder[]> {
+    const docs = await ReminderModel.find({}).lean();
+    return docs.map(doc => ({ ...doc, id: doc._id }));
+  }
+
+  async createReminder(insertReminder: InsertReminder): Promise<Reminder> {
+    const id = new mongoose.Types.ObjectId().toString();
+    const doc = await ReminderModel.create({ _id: id, ...insertReminder });
+    return { ...doc.toObject(), id: doc._id };
+  }
+
+  async deleteReminder(id: string): Promise<boolean> {
+    const result = await ReminderModel.deleteOne({ _id: id });
+    return result.deletedCount > 0;
   }
 }
 
