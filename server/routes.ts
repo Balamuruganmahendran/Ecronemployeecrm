@@ -195,14 +195,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/tasks", authenticate, requireAdmin, async (req, res) => {
     try {
-      const validation = insertTaskSchema.safeParse(req.body);
+      const today = new Date().toISOString().split('T')[0];
+      const taskData = {
+        ...req.body,
+        assignedDate: req.body.assignedDate || today,
+      };
+
+      const validation = insertTaskSchema.safeParse(taskData);
       if (!validation.success) {
         return res.status(400).json({ error: validation.error.message });
       }
 
-      const task = await storage.createTask(req.body);
+      const task = await storage.createTask(taskData);
       res.status(201).json(task);
     } catch (error) {
+      console.error("Task creation error:", error);
       res.status(500).json({ error: "Internal server error" });
     }
   });
@@ -383,18 +390,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/leave-requests", authenticate, async (req, res) => {
     try {
-      const validation = insertLeaveRequestSchema.safeParse(req.body);
+      const today = new Date().toISOString().split('T')[0];
+      const requestData = {
+        ...req.body,
+        employeeId: req.employee!.employeeId,
+        appliedDate: req.body.appliedDate || today,
+      };
+
+      const validation = insertLeaveRequestSchema.safeParse(requestData);
       if (!validation.success) {
         return res.status(400).json({ error: validation.error.message });
       }
 
-      const request = await storage.createLeaveRequest({
-        ...req.body,
-        employeeId: req.employee!.employeeId,
-      });
+      const request = await storage.createLeaveRequest(requestData);
 
       res.status(201).json(request);
     } catch (error) {
+      console.error("Leave request creation error:", error);
       res.status(500).json({ error: "Internal server error" });
     }
   });
