@@ -67,3 +67,19 @@ export const insertLeaveRequestSchema = createInsertSchema(leaveRequests).omit({
 
 export type InsertLeaveRequest = z.infer<typeof insertLeaveRequestSchema>;
 export type LeaveRequest = typeof leaveRequests.$inferSelect;
+
+export const reminders = pgTable("reminders", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  title: text("title").notNull(),
+  description: text("description").notNull(),
+  reminderDate: text("reminder_date").notNull(),
+  importance: text("importance").notNull(),
+  createdAt: text("created_at").notNull(),
+});
+
+export const insertReminderSchema = createInsertSchema(reminders).omit({
+  id: true,
+});
+
+export type InsertReminder = z.infer<typeof insertReminderSchema>;
+export type Reminder = typeof reminders.$inferSelect;

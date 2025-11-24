@@ -8,6 +8,7 @@ import {
   BarChart3,
   LogOut,
   User,
+  Bell,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -21,6 +22,7 @@ const menuItems = [
   { path: "/admin/leaves", label: "Leave Requests", icon: CalendarCheck },
   { path: "/admin/attendance", label: "Attendance", icon: History },
   { path: "/admin/analytics", label: "Analytics", icon: BarChart3 },
+  { path: "/admin/reminders", label: "Reminders", icon: Bell },
 ];
 
 export default function AdminSidebar() {

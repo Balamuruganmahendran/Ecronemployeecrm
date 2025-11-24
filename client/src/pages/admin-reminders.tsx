@@ -31,47 +31,59 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import StatusBadge from "@/components/StatusBadge";
-import { Plus, ClipboardList } from "lucide-react";
+import { Plus, Bell, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import type { Task, Employee } from "@shared/schema";
+import type { Reminder } from "@shared/schema";
 
-export default function AdminTasksPage() {
+export default function AdminRemindersPage() {
   const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [formData, setFormData] = useState({
     title: "",
     description: "",
-    assignedTo: "",
-    dueDate: "",
-    priority: "Medium",
+    reminderDate: "",
+    importance: "Medium",
   });
 
-  const { data: tasks = [], isLoading } = useQuery<Task[]>({
-    queryKey: ["/api/tasks"],
-  });
-
-  const { data: employees = [] } = useQuery<Employee[]>({
-    queryKey: ["/api/employees"],
+  const { data: reminders = [], isLoading } = useQuery<Reminder[]>({
+    queryKey: ["/api/reminders"],
   });
 
   const createMutation = useMutation({
     mutationFn: (data: typeof formData) =>
-      apiRequest("POST", "/api/tasks", data),
+      apiRequest("POST", "/api/reminders", data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/reminders"] });
       toast({
-        title: "Task assigned",
-        description: "The task has been assigned to the employee",
+        title: "Reminder created",
+        description: "Reminder has been sent to all employees",
       });
       setIsDialogOpen(false);
       setFormData({
         title: "",
         description: "",
-        assignedTo: "",
-        dueDate: "",
-        priority: "Medium",
+        reminderDate: "",
+        importance: "Medium",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) =>
+      apiRequest("DELETE", `/api/reminders/${id}`, {}),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/reminders"] });
+      toast({
+        title: "Reminder deleted",
+        description: "Reminder has been removed",
       });
     },
     onError: (error: Error) => {
@@ -88,7 +100,10 @@ export default function AdminTasksPage() {
     createMutation.mutate(formData);
   };
 
-  const selectedEmployee = employees.find(emp => emp.employeeId === formData.assignedTo);
+  const handleDelete = (reminder: Reminder) => {
+    if (!confirm(`Delete reminder "${reminder.title}"?`)) return;
+    deleteMutation.mutate(reminder.id);
+  };
 
   return (
     <ProtectedRoute adminOnly>
@@ -97,32 +112,32 @@ export default function AdminTasksPage() {
         <main className="flex-1 p-8 space-y-6">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-semibold">Task Management</h1>
+              <h1 className="text-3xl font-semibold">Reminders & Announcements</h1>
               <p className="text-muted-foreground mt-2">
-                Assign and track tasks for employees
+                Send important reminders to all employees
               </p>
             </div>
             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
               <DialogTrigger asChild>
-                <Button className="gap-2" data-testid="button-assign-task">
+                <Button className="gap-2" data-testid="button-add-reminder">
                   <Plus className="w-4 h-4" />
-                  Assign Task
+                  Add Reminder
                 </Button>
               </DialogTrigger>
               <DialogContent className="max-w-2xl">
                 <DialogHeader>
-                  <DialogTitle>Assign New Task</DialogTitle>
+                  <DialogTitle>Create New Reminder</DialogTitle>
                   <DialogDescription>
-                    Create and assign a task to an employee
+                    This reminder will be visible to all employees
                   </DialogDescription>
                 </DialogHeader>
                 <form onSubmit={handleSubmit}>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-4">
                     <div className="space-y-2 md:col-span-2">
-                      <Label htmlFor="title">Task Title</Label>
+                      <Label htmlFor="title">Title</Label>
                       <Input
                         id="title"
-                        placeholder="Complete quarterly report"
+                        placeholder="e.g., Important Meeting"
                         value={formData.title}
                         onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                         required
@@ -133,7 +148,7 @@ export default function AdminTasksPage() {
                       <Label htmlFor="description">Description</Label>
                       <Textarea
                         id="description"
-                        placeholder="Detailed task description..."
+                        placeholder="Detailed reminder information..."
                         value={formData.description}
                         onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                         required
@@ -142,41 +157,23 @@ export default function AdminTasksPage() {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="assignedTo">Assign To (Employee Name)</Label>
-                      <Select
-                        value={formData.assignedTo}
-                        onValueChange={(value) => setFormData({ ...formData, assignedTo: value })}
-                      >
-                        <SelectTrigger data-testid="select-employee">
-                          <SelectValue placeholder="Select an employee" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {employees.filter(emp => emp.role === "Employee").map((emp) => (
-                            <SelectItem key={emp.id} value={emp.employeeId}>
-                              {emp.name} ({emp.employeeId})
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="dueDate">Due Date</Label>
+                      <Label htmlFor="reminderDate">Date</Label>
                       <Input
-                        id="dueDate"
+                        id="reminderDate"
                         type="date"
-                        value={formData.dueDate}
-                        onChange={(e) => setFormData({ ...formData, dueDate: e.target.value })}
+                        value={formData.reminderDate}
+                        onChange={(e) => setFormData({ ...formData, reminderDate: e.target.value })}
                         required
-                        data-testid="input-due-date"
+                        data-testid="input-date"
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="priority">Priority</Label>
+                      <Label htmlFor="importance">Importance</Label>
                       <Select
-                        value={formData.priority}
-                        onValueChange={(value) => setFormData({ ...formData, priority: value })}
+                        value={formData.importance}
+                        onValueChange={(value) => setFormData({ ...formData, importance: value })}
                       >
-                        <SelectTrigger data-testid="select-priority">
+                        <SelectTrigger data-testid="select-importance">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -195,8 +192,8 @@ export default function AdminTasksPage() {
                     >
                       Cancel
                     </Button>
-                    <Button type="submit" disabled={createMutation.isPending || !formData.assignedTo} data-testid="button-submit">
-                      {createMutation.isPending ? "Assigning..." : "Assign Task"}
+                    <Button type="submit" disabled={createMutation.isPending} data-testid="button-submit">
+                      {createMutation.isPending ? "Creating..." : "Create Reminder"}
                     </Button>
                   </DialogFooter>
                 </form>
@@ -208,13 +205,13 @@ export default function AdminTasksPage() {
             <CardContent className="p-6">
               {isLoading ? (
                 <div className="text-center py-12 text-muted-foreground">
-                  <p>Loading tasks...</p>
+                  <p>Loading reminders...</p>
                 </div>
-              ) : tasks.length === 0 ? (
+              ) : reminders.length === 0 ? (
                 <div className="text-center py-12 text-muted-foreground">
-                  <ClipboardList className="w-16 h-16 mx-auto mb-4 opacity-50" />
-                  <p className="text-lg">No tasks assigned yet</p>
-                  <p className="text-sm mt-2">Click "Assign Task" to create your first task</p>
+                  <Bell className="w-16 h-16 mx-auto mb-4 opacity-50" />
+                  <p className="text-lg">No reminders yet</p>
+                  <p className="text-sm mt-2">Click "Add Reminder" to create your first reminder</p>
                 </div>
               ) : (
                 <div className="border rounded-lg">
@@ -222,37 +219,42 @@ export default function AdminTasksPage() {
                     <TableHeader>
                       <TableRow>
                         <TableHead>Title</TableHead>
-                        <TableHead>Assigned To</TableHead>
-                        <TableHead>Due Date</TableHead>
-                        <TableHead>Priority</TableHead>
-                        <TableHead>Status</TableHead>
+                        <TableHead>Description</TableHead>
+                        <TableHead>Date</TableHead>
+                        <TableHead>Importance</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {tasks.map((task) => {
-                        const employee = employees.find(e => e.employeeId === task.assignedTo);
-                        return (
-                          <TableRow key={task.id} data-testid={`row-task-${task.id}`}>
-                            <TableCell className="font-medium">{task.title}</TableCell>
-                            <TableCell>{employee?.name || task.assignedTo}</TableCell>
-                            <TableCell>{task.dueDate}</TableCell>
-                            <TableCell>
-                              <span className={`text-xs font-medium px-2 py-1 rounded ${
-                                task.priority === 'High' 
-                                  ? 'bg-red-100 text-red-800' 
-                                  : task.priority === 'Medium'
-                                  ? 'bg-yellow-100 text-yellow-800'
-                                  : 'bg-green-100 text-green-800'
-                              }`}>
-                                {task.priority}
-                              </span>
-                            </TableCell>
-                            <TableCell>
-                              <StatusBadge status={task.status as any} />
-                            </TableCell>
-                          </TableRow>
-                        );
-                      })}
+                      {reminders.map((reminder) => (
+                        <TableRow key={reminder.id} data-testid={`row-reminder-${reminder.id}`}>
+                          <TableCell className="font-medium">{reminder.title}</TableCell>
+                          <TableCell className="max-w-xs truncate">{reminder.description}</TableCell>
+                          <TableCell>{reminder.reminderDate}</TableCell>
+                          <TableCell>
+                            <span className={`text-xs font-medium px-2 py-1 rounded ${
+                              reminder.importance === 'High' 
+                                ? 'bg-red-100 text-red-800' 
+                                : reminder.importance === 'Medium'
+                                ? 'bg-yellow-100 text-yellow-800'
+                                : 'bg-green-100 text-green-800'
+                            }`}>
+                              {reminder.importance}
+                            </span>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleDelete(reminder)}
+                              disabled={deleteMutation.isPending}
+                              data-testid={`button-delete-${reminder.id}`}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
                     </TableBody>
                   </Table>
                 </div>
