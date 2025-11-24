@@ -1,4 +1,4 @@
-import { Switch, Route } from "wouter";
+import { Switch, Route, useLocation } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -15,10 +15,33 @@ import AdminLeavesPage from "@/pages/admin-leaves";
 import AdminAttendancePage from "@/pages/admin-attendance";
 import AdminAnalyticsPage from "@/pages/admin-analytics";
 import AdminRemindersPage from "@/pages/admin-reminders";
+import { getCurrentEmployee } from "@/lib/auth";
+
+function RootRedirect() {
+  const [, setLocation] = useLocation();
+  const employee = getCurrentEmployee();
+  
+  React.useEffect(() => {
+    if (employee) {
+      if (employee.role === "Admin") {
+        setLocation("/admin/dashboard");
+      } else {
+        setLocation("/employee/dashboard");
+      }
+    } else {
+      setLocation("/login");
+    }
+  }, [employee, setLocation]);
+  
+  return null;
+}
+
+import React from "react";
 
 function Router() {
   return (
     <Switch>
+      <Route path="/" component={RootRedirect} />
       <Route path="/login" component={LoginPage} />
       <Route path="/employee/dashboard" component={EmployeeDashboardPage} />
       <Route path="/employee/tasks" component={EmployeeTasksPage} />
