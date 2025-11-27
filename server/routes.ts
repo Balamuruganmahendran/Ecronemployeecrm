@@ -275,6 +275,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get("/api/attendance/today", authenticate, async (req, res) => {
+    try {
+      const todayAttendance = await storage.getTodayAttendance(req.employee!.employeeId);
+      
+      if (!todayAttendance) {
+        return res.status(204).end();
+      }
+
+      const employee = await storage.getEmployeeByEmployeeId(todayAttendance.employeeId);
+      
+      res.json({
+        ...todayAttendance,
+        name: employee?.name || "Unknown",
+      });
+    } catch (error) {
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
   app.get("/api/attendance", authenticate, async (req, res) => {
     try {
       const { employeeId, date, month } = req.query;
