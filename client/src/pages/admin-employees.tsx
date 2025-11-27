@@ -33,6 +33,7 @@ import {
 import { Plus, Edit, Trash2, Search, Users } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { getCurrentEmployee } from "@/lib/auth";
 import type { Employee } from "@shared/schema";
 
 export default function AdminEmployeesPage() {
@@ -49,6 +50,7 @@ export default function AdminEmployeesPage() {
 
   const { data: employees = [], isLoading } = useQuery<Employee[]>({
     queryKey: ["/api/employees"],
+    enabled: !!getCurrentEmployee(),
   });
 
   const createMutation = useMutation({

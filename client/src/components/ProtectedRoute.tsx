@@ -9,10 +9,9 @@ interface ProtectedRouteProps {
 
 export default function ProtectedRoute({ children, adminOnly = false }: ProtectedRouteProps) {
   const [, setLocation] = useLocation();
+  const auth = getAuthData();
 
   useEffect(() => {
-    const auth = getAuthData();
-    
     if (!auth) {
       setLocation("/login");
       return;
@@ -27,9 +26,8 @@ export default function ProtectedRoute({ children, adminOnly = false }: Protecte
       setLocation("/admin/dashboard");
       return;
     }
-  }, [adminOnly, setLocation]);
+  }, [adminOnly, setLocation, auth]);
 
-  const auth = getAuthData();
   if (!auth) return null;
   if (adminOnly && !isAdmin()) return null;
   if (!adminOnly && isAdmin()) return null;

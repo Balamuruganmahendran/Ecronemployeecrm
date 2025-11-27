@@ -5,6 +5,7 @@ import StatCard from "@/components/StatCard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Users, UserCheck, UserX, Calendar } from "lucide-react";
 import StatusBadge from "@/components/StatusBadge";
+import { getCurrentEmployee } from "@/lib/auth";
 import type { LeaveRequest, Attendance } from "@shared/schema";
 
 interface StatsData {
@@ -16,14 +17,17 @@ interface StatsData {
 export default function AdminDashboard() {
   const { data: stats } = useQuery<StatsData>({
     queryKey: ["/api/attendance/stats"],
+    enabled: !!getCurrentEmployee(),
   });
 
   const { data: leaveRequests = [] } = useQuery<LeaveRequest[]>({
     queryKey: ["/api/leave-requests"],
+    enabled: !!getCurrentEmployee(),
   });
 
   const { data: todayAttendance = [] } = useQuery<(Attendance & { name: string })[]>({
     queryKey: ["/api/attendance", `?date=${new Date().toISOString().split('T')[0]}`],
+    enabled: !!getCurrentEmployee(),
   });
 
   const pendingLeaves = leaveRequests.filter(r => r.status === "Pending");
