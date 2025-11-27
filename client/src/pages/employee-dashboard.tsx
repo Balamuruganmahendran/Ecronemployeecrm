@@ -115,11 +115,12 @@ export default function EmployeeDashboard() {
                     <p className="text-lg md:text-2xl font-bold text-gray-600">Not Logged In</p>
                   </div>
                 )}
-                <div className="flex flex-col gap-2">
+                <div className="flex flex-col gap-2 relative z-10">
                   <Button
+                    type="button"
                     onClick={() => loginMutation.mutate()}
                     disabled={loginMutation.isPending || isPresent}
-                    className="gap-2 w-full text-xs md:text-sm"
+                    className="gap-2 w-full text-xs md:text-sm pointer-events-auto"
                     size="sm"
                     data-testid="button-mark-present"
                   >
@@ -128,11 +129,13 @@ export default function EmployeeDashboard() {
                     <span className="sm:hidden">{loginMutation.isPending ? "..." : isPresent ? "Present" : "Login"}</span>
                   </Button>
                   <Button
+                    type="button"
                     onClick={() => logoutMutation.mutate()}
                     disabled={logoutMutation.isPending || !isPresent || hasLoggedOut}
                     variant="outline"
-                    className="gap-2 w-full text-xs md:text-sm"
+                    className="gap-2 w-full text-xs md:text-sm pointer-events-auto"
                     size="sm"
+                    title="Click to mark end time"
                     data-testid="button-mark-logout"
                   >
                     <LogOutIcon className="w-3 h-3 md:w-4 md:h-4" />
