@@ -66,7 +66,7 @@ export default function LoginPage() {
             <Building2 className="w-5 h-5 md:w-6 md:h-6 text-primary-foreground" />
           </div>
           <div>
-            <CardTitle className="text-xl md:text-2xl font-semibold">Employee LMS</CardTitle>
+            <CardTitle className="text-xl md:text-2xl font-semibold">Employee CRM</CardTitle>
             <CardDescription className="mt-1 md:mt-2 text-xs md:text-sm">
               Enter your credentials to access your account
             </CardDescription>
@@ -101,11 +101,6 @@ export default function LoginPage() {
                 className="text-xs md:text-sm"
                 data-testid="input-password"
               />
-            </div>
-            <div className="text-xs text-muted-foreground space-y-1 bg-muted/50 p-3 rounded">
-              <p className="font-medium">Demo Accounts:</p>
-              <p>Admin: <code className="bg-background px-1 rounded text-xs">ADMIN</code> / <code className="bg-background px-1 rounded text-xs">admin123</code></p>
-              <p>Employee: <code className="bg-background px-1 rounded text-xs">EMP001</code> / <code className="bg-background px-1 rounded text-xs">emp123</code></p>
             </div>
             <Button
               type="submit"
