@@ -102,7 +102,7 @@ export default function EmployeeDashboard() {
                 <CardTitle className="text-xs md:text-sm font-medium">Status Today</CardTitle>
                 <Clock className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
-              <CardContent className="space-y-3 md:space-y-4">
+              <CardContent className="space-y-4">
                 {isPresent ? (
                   <div className="space-y-2">
                     <p className="text-lg md:text-2xl font-bold text-green-600">Logged In</p>
@@ -115,34 +115,39 @@ export default function EmployeeDashboard() {
                     <p className="text-lg md:text-2xl font-bold text-gray-600">Not Logged In</p>
                   </div>
                 )}
-                <div className="flex flex-col gap-2 relative z-10">
-                  <Button
-                    type="button"
-                    onClick={() => loginMutation.mutate()}
-                    disabled={loginMutation.isPending || isPresent}
-                    className="gap-2 w-full text-xs md:text-sm pointer-events-auto"
-                    size="sm"
-                    data-testid="button-mark-present"
-                  >
-                    <LogIn className="w-3 h-3 md:w-4 md:h-4" />
-                    <span className="hidden sm:inline">{loginMutation.isPending ? "Marking..." : isPresent ? "Already Present" : "Mark Present"}</span>
-                    <span className="sm:hidden">{loginMutation.isPending ? "..." : isPresent ? "Present" : "Login"}</span>
-                  </Button>
-                  <Button
-                    type="button"
-                    onClick={() => logoutMutation.mutate()}
-                    disabled={logoutMutation.isPending || !isPresent || hasLoggedOut}
-                    variant="outline"
-                    className="gap-2 w-full text-xs md:text-sm pointer-events-auto"
-                    size="sm"
-                    title="Click to mark end time"
-                    data-testid="button-mark-logout"
-                  >
-                    <LogOutIcon className="w-3 h-3 md:w-4 md:h-4" />
-                    <span className="hidden sm:inline">{logoutMutation.isPending ? "Logging out..." : hasLoggedOut ? "Logged Out" : "Mark End Time"}</span>
-                    <span className="sm:hidden">{logoutMutation.isPending ? "..." : hasLoggedOut ? "Out" : "Logout"}</span>
-                  </Button>
-                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-xs md:text-sm font-medium">Actions</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                <Button
+                  type="button"
+                  onClick={() => loginMutation.mutate()}
+                  disabled={loginMutation.isPending || isPresent}
+                  className="gap-2 w-full text-xs md:text-sm"
+                  size="sm"
+                  data-testid="button-mark-present"
+                >
+                  <LogIn className="w-3 h-3 md:w-4 md:h-4" />
+                  <span className="hidden sm:inline">{loginMutation.isPending ? "Marking..." : isPresent ? "Already Present" : "Mark Present"}</span>
+                  <span className="sm:hidden">{loginMutation.isPending ? "..." : isPresent ? "Present" : "Login"}</span>
+                </Button>
+                <Button
+                  type="button"
+                  onClick={() => logoutMutation.mutate()}
+                  disabled={logoutMutation.isPending || !isPresent || hasLoggedOut}
+                  variant="outline"
+                  className="gap-2 w-full text-xs md:text-sm cursor-pointer"
+                  size="sm"
+                  data-testid="button-mark-logout"
+                >
+                  <LogOutIcon className="w-3 h-3 md:w-4 md:h-4" />
+                  <span className="hidden sm:inline">{logoutMutation.isPending ? "Logging out..." : hasLoggedOut ? "Logged Out" : "Mark End Time"}</span>
+                  <span className="sm:hidden">{logoutMutation.isPending ? "..." : hasLoggedOut ? "Out" : "Logout"}</span>
+                </Button>
               </CardContent>
             </Card>
 
