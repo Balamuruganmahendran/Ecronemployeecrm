@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Link, useLocation } from "wouter";
 import {
   LayoutDashboard,
@@ -11,7 +12,6 @@ import {
   Bell,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
 import { getCurrentEmployee, clearAuthData } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
 
@@ -27,16 +27,28 @@ const menuItems = [
 
 export default function AdminSidebar() {
   const [location, setLocation] = useLocation();
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
   const { toast } = useToast();
   const employee = getCurrentEmployee();
 
-  const handleLogout = () => {
-    clearAuthData();
-    setLocation("/login");
-    toast({
-      title: "Logged out successfully",
-      description: "See you next time!",
-    });
+  const handleLogout = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (isLoggingOut) return;
+    setIsLoggingOut(true);
+
+    try {
+      clearAuthData();
+      toast({
+        title: "Logged out successfully",
+        description: "See you next time!",
+      });
+      setTimeout(() => setLocation("/login"), 100);
+    } catch (error) {
+      console.error("Logout error:", error);
+      setIsLoggingOut(false);
+    }
   };
 
   return (
@@ -78,13 +90,15 @@ export default function AdminSidebar() {
           </div>
         </div>
         <Button
+          type="button"
           variant="ghost"
           className="w-full justify-start gap-3 h-9 md:h-10 pl-3 md:pl-4 text-xs md:text-sm"
           onClick={handleLogout}
+          disabled={isLoggingOut}
           data-testid="button-logout"
         >
           <LogOut className="w-4 h-4 flex-shrink-0" />
-          <span className="hidden lg:inline">Logout</span>
+          <span className="hidden lg:inline">{isLoggingOut ? "Logging out..." : "Logout"}</span>
         </Button>
       </div>
     </div>

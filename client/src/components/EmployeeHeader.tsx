@@ -14,17 +14,29 @@ const navItems = [
 export default function EmployeeHeader() {
   const [location, setLocation] = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
   const { toast } = useToast();
   const employee = getCurrentEmployee();
 
-  const handleLogout = () => {
-    clearAuthData();
-    setMobileMenuOpen(false);
-    setLocation("/login");
-    toast({
-      title: "Logged out successfully",
-      description: "See you next time!",
-    });
+  const handleLogout = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    if (isLoggingOut) return;
+    setIsLoggingOut(true);
+
+    try {
+      clearAuthData();
+      setMobileMenuOpen(false);
+      toast({
+        title: "Logged out successfully",
+        description: "See you next time!",
+      });
+      setTimeout(() => setLocation("/login"), 100);
+    } catch (error) {
+      console.error("Logout error:", error);
+      setIsLoggingOut(false);
+    }
   };
 
   return (
@@ -62,19 +74,23 @@ export default function EmployeeHeader() {
               </div>
             </div>
             <Button
+              type="button"
               variant="ghost"
               size="icon"
               onClick={handleLogout}
+              disabled={isLoggingOut}
               className="h-9 w-9 md:h-10 md:w-10"
-              data-testid="button-logout-header"
+              data-testid="button-logout"
             >
               <LogOut className="w-4 h-4" />
             </Button>
             <Button
+              type="button"
               variant="ghost"
               size="icon"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               className="md:hidden h-9 w-9"
+              data-testid="button-menu-toggle"
             >
               {mobileMenuOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
             </Button>
